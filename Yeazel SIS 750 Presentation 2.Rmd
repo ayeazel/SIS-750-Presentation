@@ -1,0 +1,200 @@
+---
+title: "Internally Displaced Persons Globally"
+subtitle: "Due to Conflict/Violence and Disasters"
+author: "Adam Yeazel"
+institute: "SIS 750: Data Analysis"
+date: "04/07/2023"
+output:
+  xaringan::moon_reader:
+    lib_dir: libs
+    css: ["uwm", "uwm-fonts"]
+    nature:
+      countdown: 60000
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+---
+
+```{r setup, include=FALSE}
+options(htmltools.dir.version = FALSE)
+library(tidyverse)
+library(knitr)
+library(kableExtra)
+library(patchwork)
+library(leaflet)
+library(ggthemes)
+library(lattice)
+
+setwd("/Users/adamyeazel/Desktop/American University/SIS 750 Data Analysis/Problem Sets/Presentation 2")
+
+# reading in data
+idp = readxl::read_excel('IDMC_Internal_Displacement_Conflict-Violence_Disasters_2008_2021.xlsx')
+```
+
+# Data
+
+The data for this presentation comes from the [Internal Displacement Monitoring Centre](https://www.internal-displacement.org/database/displacement-data) one of the leading sources of data and analysis on internal displacement and part of the Norwegian Refugee Council (NRC). 
+
+--
+
+- The data contains 1,965 observations of 11 variables; observations are years between 2008-2021 grouped by country
+
+--
+
+- The data includes displacements for a given year as well as stock numbers of IDPs who remain displaced from previous years
+
+--
+
+```{r data, echo = FALSE, warning=FALSE, message=FALSE}
+# summary table for both conflict and disasters
+
+# cleaning the first row of descriptions of variables 
+df = idp[-1,]
+
+# changing data types to be numeric
+df$`Conflict Internal Displacements` <- as.numeric(df$`Conflict Internal Displacements`)
+df$`Conflict Stock Displacement` <- as.numeric(df$`Conflict Stock Displacement`)
+df$`Disaster Internal Displacements` <- as.numeric(df$`Disaster Internal Displacements`)
+df$`Disaster Stock Displacement` <- as.numeric(df$`Disaster Stock Displacement`)
+
+# making a summary table of conflict IDPs 
+df %>%
+  summarize(
+    Min = min(`Conflict Internal Displacements`, na.rm = TRUE),
+    Mean = mean(`Conflict Internal Displacements`, na.rm = TRUE),
+    Median = median(`Conflict Internal Displacements`, na.rm = TRUE),
+    Max = max(`Conflict Internal Displacements`, na.rm = TRUE),
+    SD = sd(`Conflict Internal Displacements`, na.rm = TRUE)
+  ) %>% 
+  knitr::kable(format = 'html', digits = 1L,
+               caption = "Conflict Internal Displacements (per Year)")
+```
+<br/>
+```{r table 2, echo=FALSE, warning=FALSE, message=FALSE}
+# summary table of disaster IDPs
+df %>%
+  summarize(
+    Min = min(`Disaster Internal Displacements`, na.rm = TRUE),
+    Mean = mean(`Disaster Internal Displacements`, na.rm = TRUE),
+    Median = median(`Disaster Internal Displacements`, na.rm = TRUE),
+    Max = max(`Disaster Internal Displacements`, na.rm = TRUE),
+    SD = sd(`Disaster Internal Displacements`, na.rm = TRUE)
+  ) %>% 
+  knitr::kable(format = 'html', digits = 1L,
+               caption = "Disaster Internal Displacements (per Year)")
+```
+
+---
+
+# Data
+
+- The data is extremely right skewed, so it has been log transformed to facilitate analysis
+
+```{r summary viz, echo=FALSE, fig.height=6, fig.width=12, message=FALSE, warning=FALSE, dpi=300}
+# creating log histogram for conflict IDPs
+plot1 = ggplot(data = df, aes(log(`Conflict Internal Displacements`))) + 
+  geom_histogram(color = "white", fill = "#c5050c") + 
+  scale_y_continuous(limits = c(0, 150)) + 
+  labs(x = "Log Conflict IDPs", y = "Count", main = "Log Conflict IDPs") + 
+  theme_minimal() + 
+  theme(axis.text.x = element_text(size = 12),
+        axis.text.y = element_text(size = 12),
+        axis.title = element_text(size = 17))
+
+# creating log histogram for disaster IDPs
+plot2 = ggplot(data = df, aes(log(`Disaster Internal Displacements`))) + 
+  geom_histogram(color = "white", fill = "#c5050c") + 
+  scale_y_continuous(limits = c(0, 150)) + 
+  labs(x = "Log Disaster IDPs", y = "Count ", main = "Log Disaster IDPs") + 
+  theme_minimal() + 
+  theme(axis.text.x = element_text(size = 12),
+        axis.text.y = element_text(size = 12),
+        axis.title = element_text(size = 17))
+
+plot1 + plot2 + 
+  plot_annotation(
+    title = "Log Conflict IDPs vs. Log Disaster IDPs",
+    caption = "Data up to 2021",
+    theme = theme(plot.title = element_text(size = 25)) + 
+    theme(plot.title = element_text(hjust = 0.5, face = 'bold')) +
+    theme(axis.text.x = element_text(size = 20),
+            axis.text.y = element_text(size = 20)))
+```
+
+---
+
+class: inverse, middle, center
+
+# Exploring the Data
+
+---
+
+# Case Studies due to Conflict vs. Disaster
+
+```{r case studies, warning=FALSE, message=FALSE, echo=FALSE, fig.height=8, fig.width=12, dpi=300}
+# forcing non-scientific notation
+options(scipen = 90)
+
+# graphing IDPs in Sudan over time 
+sudan = df %>% 
+  filter(Name == "Sudan")
+afghanistan = df %>% 
+  filter(Name == "Afghanistan")
+yemen = df %>% 
+  filter(Name == "Yemen")
+
+# log conflict displacements over time
+c1 = ggplot(data = sudan, aes(Year, `Conflict Internal Displacements`, group = 1)) +
+  geom_line(aes(color = "Sudan"), lwd = 2) + 
+  geom_line(data = afghanistan, aes(color = "Afghanistan"), lwd = 2) +
+  geom_line(data = yemen, aes(color = "Yemen"), lwd = 2) + 
+  labs(y = "Log Conflict IDP", color = "Country", lwd = 2) + 
+  scale_y_continuous(trans = "log10") + 
+  annotation_logticks(sides = "l") + 
+  theme(legend.position = "right",
+        legend.title = element_text(size = 20),
+        legend.text = element_text(size = 20),
+        axis.text.x = element_text(angle = -30, vjust = 1, hjust = 0, size = 15),
+        axis.text.y = element_text(size = 15),
+        axis.title = element_text(size = 17)) + 
+  theme_minimal() + 
+  plot_annotation(
+    caption = "Data up to 2021",
+    theme = theme(plot.title = element_text(size = 30)) + 
+    theme(plot.title = element_text(hjust = 0.5, face = 'bold')) +
+    theme(axis.text.x = element_text(size = 25),
+            axis.text.y = element_text(size = 25))) + 
+  theme(legend.text = element_text(size = 15), legend.title = element_text(size = 15))
+
+# log disaster displacements over time 
+c2 = ggplot(data = sudan, aes(Year, `Disaster Internal Displacements`, group = 1)) +
+  geom_line(aes(color = "Sudan"), lwd = 1, linetype = 5) + 
+  geom_line(data = afghanistan, aes(color = "Afghanistan"), lwd = 1, linetype = 5) +
+  geom_line(data = yemen, aes(color = "Yemen"), lwd = 1, linetype = 5) + 
+  scale_y_continuous(trans = "log10") + 
+  annotation_logticks(sides = "l") + 
+  labs(y = "Log Disaster IDP", color = "Country", lwd = 2) + 
+  theme(legend.position = "right",
+        legend.title = element_text(size = 20),
+        legend.text = element_text(size = 20),
+        axis.text.x = element_text(angle = -30, vjust = 1, hjust = 0, size = 15),
+        axis.text.y = element_text(size = 15),
+        axis.title = element_text(size = 17))+ 
+  theme_minimal() +
+  plot_annotation(
+    caption = "Data up to 2021",
+    theme = theme(plot.title = element_text(size = 30)) + 
+    theme(plot.title = element_text(hjust = 0.5, face = 'bold')) +
+    theme(axis.text.x = element_text(size = 25),
+            axis.text.y = element_text(size = 25))) + 
+  theme(legend.text = element_text(size = 15), legend.title = element_text(size = 15))
+
+c1 / c2 + 
+  plot_annotation(title = "Conflict vs. Disaster IDPs With Case Studies",
+                  caption = "Data up to 2021",
+    theme = theme(plot.title = element_text(size = 30)) + 
+    theme(plot.title = element_text(hjust = 0.5, face = 'bold')) +
+    theme(axis.text.x = element_text(size = 40),
+            axis.text.y = element_text(size = 40))) + 
+  theme(legend.text = element_text(size = 40))
+```
