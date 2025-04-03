@@ -1,2 +1,2 @@
 # SIS-750-Presentation
-Presentation 
+This presentation is an example of R Markdown slides. 
